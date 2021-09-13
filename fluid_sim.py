@@ -49,8 +49,8 @@ def simulate(dens, x_vel, y_vel):
         dens = diffuse(0.1, dens)
 
         # ------------------------------ Diffusion of velocities ------------------------------
-        x_vel = diffuse(0.01, x_vel)
-        y_vel = diffuse(0.01, y_vel)
+        x_vel = diffuse(0.005, x_vel)
+        y_vel = diffuse(0.005, y_vel)
 
         # ------------------------------ Advection of velocities ------------------------------
         # X-velocity
