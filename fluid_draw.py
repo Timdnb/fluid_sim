@@ -1,7 +1,8 @@
 import numpy as np
+from numpy.lib import c_
 import pygame as pg
 from math import atan2, floor
-from parameters import grid_size, dens, x_vel, y_vel, show_arrows
+from parameters import grid_size
 
 # Pygame
 pg.init()
@@ -22,25 +23,7 @@ arrows = pg.Surface(res, pg.SRCALPHA, 32)
 arrows = arrows.convert_alpha()
 arrows_rect = arrows.get_rect()
 
-# Draw arrows
-if show_arrows:
-    for row in range(grid_size):
-        for ele in range(grid_size):
-            # Position arrow
-            arrow_rect.x = ele*(w_scr/grid_size)
-            arrow_rect.y = row*(h_scr/grid_size)
-
-            # Calculate angle for velocity vector
-            angle = atan2(y_vel[row,ele],x_vel[row,ele]) * (180/np.pi)
-
-            # Resize and rotate
-            arrow_siz = pg.transform.smoothscale(arrow, (int(0.7*(w_scr/grid_size)),int(0.7*(h_scr/grid_size))))
-            arrow_ang = pg.transform.rotate(arrow_siz, angle)
-
-            # Blit onto surface
-            arrows.blit(arrow_ang, arrow_rect)
-
-def draw(dens):
+def draw(dens, x_vel, y_vel):
     # Press escape to exit simulation
     pg.event.pump()
 
@@ -59,7 +42,15 @@ def draw(dens):
         ele = floor(mouse_pos[0] / (w_scr/grid_size))
         row = floor(mouse_pos[1] / (h_scr/grid_size))
 
-        dens[row,ele] += 250
+        dens[row,ele] += 100
+        x_vel[row,ele] += 1
+        y_vel[row,ele] += 1
+
+        # Prevent velocities from getting bigger than one
+        if abs(x_vel[row,ele]) > 1:
+            x_vel[row,ele] = 1
+        if abs(y_vel[row,ele]) > 1:
+            y_vel[row,ele] = 1
 
     # Find max density, black will be assigned to this density
     max_dens = 50 # np.max(dens) + 0.0001
@@ -73,12 +64,28 @@ def draw(dens):
             # Make color based on density (lower density = lighter color)
             c_dens = 255 - int((dens[row,ele]/max_dens)*255) 
             if c_dens < 0:
-                c_dens = 0        
+                c_dens = 0  
+            if c_dens > 255:
+                c_dens = 255      
             color = (c_dens,c_dens,c_dens)
+
+            # Position arrow
+            arrow_rect.x = x
+            arrow_rect.y = y
+
+            # Calculate angle for velocity vector
+            angle = atan2(y_vel[row,ele],x_vel[row,ele]) * (180/np.pi)
+            
+            speed = 0.5 + (y_vel[row,ele]**2 + x_vel[row,ele]**2) ** (1/2)
+
+            # Resize and rotate
+            arrow_siz = pg.transform.smoothscale(arrow, (int(speed*(w_scr/grid_size)),int(speed*(h_scr/grid_size))))
+            arrow_ang = pg.transform.rotate(arrow_siz, angle)
 
             # Draw rectangles and blit arrow on the screen
             pg.draw.rect(screen, color, (x, y, w_scr/grid_size, h_scr/grid_size))
+            screen.blit(arrow_ang, arrow_rect)
 
-    screen.blit(arrows, arrows_rect)
+    # screen.blit(arrows, arrows_rect)
 
     pg.display.flip()
