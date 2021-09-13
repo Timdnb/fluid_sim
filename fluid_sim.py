@@ -108,23 +108,23 @@ def simulate(dens, x_vel, y_vel):
         x_vel_neg = np.where(x_vel<0, x_vel, 0)
 
         # Calculate density that will be moved away
-        x_vel_pos_dens = x_vel_pos*0.005
-        x_vel_neg_dens = x_vel_neg*0.005
+        x_vel_pos_tr = x_vel_pos*0.005
+        x_vel_neg_tr = x_vel_neg*0.005
 
         # Subtract this density from the squares where it is at
-        x_vel -= (x_vel_pos_dens + abs(x_vel_neg_dens))
+        x_vel -= (x_vel_pos_tr + abs(x_vel_neg_tr))
 
         # Move positive densities to the right and negative to the left
-        dens_x_vel1 = np.pad(x_vel_pos_dens, ((0,0),(2,0)), constant_values=0)
-        dens_x_vel2 = np.pad(x_vel_neg_dens, ((0,0),(0,2)), constant_values=0)
+        tr_x_vel1 = np.pad(x_vel_pos_tr, ((0,0),(2,0)), constant_values=0)
+        tr_x_vel2 = np.pad(x_vel_neg_tr, ((0,0),(0,2)), constant_values=0)
 
         # Now add the densities to the squares where it moved to
-        x_vel_add_dens = dens_x_vel1 + abs(dens_x_vel2)
-        x_vel_add_dens[:,1] += x_vel_add_dens[:,0]
-        x_vel_add_dens[:,-2] += x_vel_add_dens[:,-1]
-        x_vel_add_dens = x_vel_add_dens[0:grid_size, 1:-1]
+        x_vel_add_vel = tr_x_vel1 + abs(tr_x_vel2)
+        x_vel_add_vel[:,1] += x_vel_add_vel[:,0]
+        x_vel_add_vel[:,-2] += x_vel_add_vel[:,-1]
+        x_vel_add_vel = x_vel_add_vel[0:grid_size, 1:-1]
 
-        x_vel += x_vel_add_dens
+        x_vel += x_vel_add_vel
 
         # Y-velocity
         # Separate positive and negative y-velocities
@@ -132,23 +132,23 @@ def simulate(dens, x_vel, y_vel):
         y_vel_neg = np.where(y_vel<0, y_vel, 0)
 
         # Calculate density that will be moved away
-        y_vel_pos_dens = y_vel_pos*0.005
-        y_vel_neg_dens = y_vel_neg*0.005
+        y_vel_pos_tr = y_vel_pos*0.005
+        y_vel_neg_tr = y_vel_neg*0.005
 
         # Subtract this density from the squares where it is at
-        y_vel -= (y_vel_pos_dens + abs(y_vel_neg_dens))
+        y_vel -= (y_vel_pos_tr + abs(y_vel_neg_tr))
 
         # Move positive densities up and negative down
-        dens_y_vel1 = np.pad(y_vel_pos_dens, ((0,2),(0,0)), constant_values=0)
-        dens_y_vel2 = np.pad(y_vel_neg_dens, ((2,0),(0,0)), constant_values=0)
+        tr_y_vel1 = np.pad(y_vel_pos_tr, ((0,2),(0,0)), constant_values=0)
+        tr_y_vel2 = np.pad(y_vel_neg_tr, ((2,0),(0,0)), constant_values=0)
 
         # Now add the densities to the squares where it moved to
-        y_vel_add_dens = dens_y_vel1 + abs(dens_y_vel2)
-        y_vel_add_dens[1,:] += y_vel_add_dens[0,:]
-        y_vel_add_dens[-2,:] += y_vel_add_dens[-1,:]
-        y_vel_add_dens = y_vel_add_dens[1:-1, 0:grid_size]
+        y_vel_add_vel = tr_y_vel1 + abs(tr_y_vel2)
+        y_vel_add_vel[1,:] += y_vel_add_vel[0,:]
+        y_vel_add_vel[-2,:] += y_vel_add_vel[-1,:]
+        y_vel_add_vel = y_vel_add_vel[1:-1, 0:grid_size]
 
-        y_vel += y_vel_add_dens
+        y_vel += y_vel_add_vel
 
         # Draw the density (higher density = darker)
         draw(dens, x_vel, y_vel)
