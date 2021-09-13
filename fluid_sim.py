@@ -1,5 +1,6 @@
 import numpy as np
 import pygame as pg
+import time
 
 # Other files
 from parameters import grid_size, dens,x_vel, y_vel
@@ -9,31 +10,49 @@ from fluid_draw import draw
 # http://graphics.cs.cmu.edu/nsp/course/15-464/Fall09/papers/StamFluidforGames.pdf
 # https://www.youtube.com/watch?v=qsYE1wMEMPA
 
-def simulate( dens, x_vel, y_vel):
+def diffuse(a, arr):
+    """
+    Function to update every array cell based on its average surroundings for a certain property
+    """
+    # Add padding in 4 different ways
+    arr1 = np.pad(arr, ((2,0),(1,1)), constant_values=0)
+    arr2 = np.pad(arr, ((0,2),(1,1)), constant_values=0)
+    arr3 = np.pad(arr, ((1,1),(2,0)), constant_values=0)
+    arr4 = np.pad(arr, ((1,1),(0,2)), constant_values=0)
+
+    # Calculate average of each square based on the 4 neighbouring squares
+    avg_arr = a * (arr1 + arr2 + arr3 + arr4) / 4
+
+    # Add sides to row besides it
+    avg_arr[1] += avg_arr[0]
+    avg_arr[grid_size] += avg_arr[grid_size+1]
+    avg_arr[:,1] += avg_arr[:,0]
+    avg_arr[:,grid_size] += avg_arr[:,grid_size+1]
+
+    # Now remove the padding that was initially added
+    avg_arr = avg_arr[1:-1, 1:-1]
+
+    # Calculate the new values based on the current values and the average neighbouring values
+    arr = (1-a)*arr + avg_arr
+
+    return arr
+
+def simulate(dens, x_vel, y_vel):
+    """
+    Simulate the whole fluid
+    """
     running = True
 
     while running:
-        # Add padding in 4 different ways
-        dens1 = np.pad(dens, ((2,0),(1,1)), constant_values=0)
-        dens2 = np.pad(dens, ((0,2),(1,1)), constant_values=0)
-        dens3 = np.pad(dens, ((1,1),(2,0)), constant_values=0)
-        dens4 = np.pad(dens, ((1,1),(0,2)), constant_values=0)
+        # time.sleep(1)
+        # ------------------------------ Diffusion of density ------------------------------
+        dens = diffuse(0.1, dens)
 
-        # Calculate average density of each square based on the 4 neighbouring squares
-        avg_dens = a * (dens1 + dens2 + dens3 + dens4) / 4
+        # ------------------------------ Diffusion of velocities ------------------------------
+        x_vel = diffuse(0.01, x_vel)
+        y_vel = diffuse(0.01, y_vel)
 
-        # Add sides to row besides it
-        avg_dens[1] += avg_dens[0]
-        avg_dens[grid_size] += avg_dens[grid_size+1]
-        avg_dens[:,1] += avg_dens[:,0]
-        avg_dens[:,grid_size] += avg_dens[:,grid_size+1]
-
-        # Now remove the padding that was initially added
-        avg_dens = avg_dens[1:-1, 1:-1]
-
-        # Calculate the new density based on the current density and the average neighbouring density
-        dens = (1-a)*dens + avg_dens
-        
+        # ------------------------------ Advection of velocities ------------------------------
         # X-velocity
         # Separate positive and negative x-velocities
         x_vel_pos = np.where(x_vel>0, x_vel, 0)
@@ -83,7 +102,7 @@ def simulate( dens, x_vel, y_vel):
         dens += y_vel_add_dens
 
         # Draw the density (higher density = darker)
-        draw(dens)
+        draw(dens, x_vel, y_vel)
 
         # Press "C" to clean entire board
         pg.event.pump()
@@ -91,9 +110,6 @@ def simulate( dens, x_vel, y_vel):
 
         if keys[pg.K_c]:
             dens = np.zeros((grid_size,grid_size))
-
-# Constants
-a = 0.1 # Diffusion factor
 
 # Run
 simulate(dens, x_vel, y_vel)
