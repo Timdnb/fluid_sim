@@ -49,18 +49,18 @@ def simulate(dens, x_vel, y_vel):
         dens = diffuse(0.1, dens)
 
         # ------------------------------ Diffusion of velocities ---------------------------
-        x_vel = diffuse(0.005, x_vel)
-        y_vel = diffuse(0.005, y_vel)
+        x_vel = diffuse(0.05, x_vel)
+        y_vel = diffuse(0.05, y_vel)
 
-        # ------------------------------ Advection  ----------------------------------------
+        # ------------------------------ Advection -----------------------------------------
         # X-velocity
         # Separate positive and negative x-velocities
         x_vel_pos = np.where(x_vel>0, x_vel, 0)
         x_vel_neg = np.where(x_vel<0, x_vel, 0)
 
-        # Calculate density that will be moved away
-        x_vel_pos_dens = x_vel_pos*dens
-        x_vel_neg_dens = x_vel_neg*dens
+        # Calculate density that will be moved away, used the logistic function to prevent overflow because of velocities > 1 (should be fixed in future)
+        x_vel_pos_dens = -(1/(1+np.exp(x_vel_pos))-0.5)*dens
+        x_vel_neg_dens = -(1/(1+np.exp(x_vel_neg))-0.5)*dens
 
         # Subtract this density from the squares where it is at
         dens -= (x_vel_pos_dens + abs(x_vel_neg_dens))
@@ -82,9 +82,9 @@ def simulate(dens, x_vel, y_vel):
         y_vel_pos = np.where(y_vel>0, y_vel, 0)
         y_vel_neg = np.where(y_vel<0, y_vel, 0)
 
-        # Calculate density that will be moved away
-        y_vel_pos_dens = y_vel_pos*dens
-        y_vel_neg_dens = y_vel_neg*dens
+        # Calculate density that will be moved away, used the logistic function to prevent overflow because of velocities > 1 (should be fixed in future)
+        y_vel_pos_dens = -(1/(1+np.exp(y_vel_pos))-0.5)*dens
+        y_vel_neg_dens = -(1/(1+np.exp(y_vel_neg))-0.5)*dens
 
         # Subtract this density from the squares where it is at
         dens -= (y_vel_pos_dens + abs(y_vel_neg_dens))
@@ -101,57 +101,68 @@ def simulate(dens, x_vel, y_vel):
 
         dens += y_vel_add_dens
 
+        # --------------------- Walls
+        x_vel[:,0] = 0
+        x_vel[:,-1] = 0
+        y_vel[0,:] = 0
+        y_vel[-1,:] = 0
+
         # ------------------------------ Self-Advection of velocities ----------------------
-        # X-velocity
-        # Separate positive and negative x-velocities
-        x_vel_pos = np.where(x_vel>0, x_vel, 0)
-        x_vel_neg = np.where(x_vel<0, x_vel, 0)
+        # # X-velocity
+        # # Separate positive and negative x-velocities
+        # x_vel_pos = np.where(x_vel>0, x_vel, 0)
+        # x_vel_neg = np.where(x_vel<0, x_vel, 0)
 
-        # Calculate density that will be moved away
-        x_vel_pos_tr = x_vel_pos*0.005
-        x_vel_neg_tr = x_vel_neg*0.005
+        # # Calculate velocity that will be moved away
+        # x_vel_pos_tr = x_vel_pos*0.05
+        # x_vel_neg_tr = x_vel_neg*0.05
 
-        # Subtract this density from the squares where it is at
-        x_vel -= (x_vel_pos_tr + abs(x_vel_neg_tr))
+        # # Subtract this velocity from the squares where it is at
+        # x_vel -= (x_vel_pos_tr + abs(x_vel_neg_tr))
 
-        # Move positive densities to the right and negative to the left
-        tr_x_vel1 = np.pad(x_vel_pos_tr, ((0,0),(2,0)), constant_values=0)
-        tr_x_vel2 = np.pad(x_vel_neg_tr, ((0,0),(0,2)), constant_values=0)
+        # # Move positive velocities to the right and negative to the left
+        # tr_x_vel1 = np.pad(x_vel_pos_tr, ((0,0),(2,0)), constant_values=0)
+        # tr_x_vel2 = np.pad(x_vel_neg_tr, ((0,0),(0,2)), constant_values=0)
 
-        # Now add the densities to the squares where it moved to
-        x_vel_add_vel = tr_x_vel1 + abs(tr_x_vel2)
-        x_vel_add_vel[:,1] += x_vel_add_vel[:,0]
-        x_vel_add_vel[:,-2] += x_vel_add_vel[:,-1]
-        x_vel_add_vel = x_vel_add_vel[0:grid_size, 1:-1]
+        # # Now add the velocities to the squares where it moved to
+        # x_vel_add_vel = tr_x_vel1 + abs(tr_x_vel2)
+        # x_vel_add_vel[:,1] += x_vel_add_vel[:,0]
+        # x_vel_add_vel[:,-2] += x_vel_add_vel[:,-1]
+        # x_vel_add_vel = x_vel_add_vel[0:grid_size, 1:-1]
 
-        x_vel += x_vel_add_vel
+        # x_vel += x_vel_add_vel
 
-        # Y-velocity
-        # Separate positive and negative y-velocities
-        y_vel_pos = np.where(y_vel>0, y_vel, 0)
-        y_vel_neg = np.where(y_vel<0, y_vel, 0)
+        # # Y-velocity
+        # # Separate positive and negative y-velocities
+        # y_vel_pos = np.where(y_vel>0, y_vel, 0)
+        # y_vel_neg = np.where(y_vel<0, y_vel, 0)
 
-        # Calculate density that will be moved away
-        y_vel_pos_tr = y_vel_pos*0.005
-        y_vel_neg_tr = y_vel_neg*0.005
+        # # Calculate velocity that will be moved away
+        # y_vel_pos_tr = y_vel_pos*0.05
+        # y_vel_neg_tr = y_vel_neg*0.05
 
-        # Subtract this density from the squares where it is at
-        y_vel -= (y_vel_pos_tr + abs(y_vel_neg_tr))
+        # # Subtract this velocity from the squares where it is at
+        # y_vel -= (y_vel_pos_tr + abs(y_vel_neg_tr))
 
-        # Move positive densities up and negative down
-        tr_y_vel1 = np.pad(y_vel_pos_tr, ((0,2),(0,0)), constant_values=0)
-        tr_y_vel2 = np.pad(y_vel_neg_tr, ((2,0),(0,0)), constant_values=0)
+        # # Move positive velocities up and velocities down
+        # tr_y_vel1 = np.pad(y_vel_pos_tr, ((0,2),(0,0)), constant_values=0)
+        # tr_y_vel2 = np.pad(y_vel_neg_tr, ((2,0),(0,0)), constant_values=0)
 
-        # Now add the densities to the squares where it moved to
-        y_vel_add_vel = tr_y_vel1 + abs(tr_y_vel2)
-        y_vel_add_vel[1,:] += y_vel_add_vel[0,:]
-        y_vel_add_vel[-2,:] += y_vel_add_vel[-1,:]
-        y_vel_add_vel = y_vel_add_vel[1:-1, 0:grid_size]
+        # # Now add the velocities to the squares where it moved to
+        # y_vel_add_vel = tr_y_vel1 + abs(tr_y_vel2)
+        # y_vel_add_vel[1,:] += y_vel_add_vel[0,:]
+        # y_vel_add_vel[-2,:] += y_vel_add_vel[-1,:]
+        # y_vel_add_vel = y_vel_add_vel[1:-1, 0:grid_size]
 
-        y_vel += y_vel_add_vel
+        # y_vel += y_vel_add_vel
 
         # Draw the density (higher density = darker)
         draw(dens, x_vel, y_vel)
+
+        # print(np.sum(dens))
+        # print(np.sum(x_vel))
+        # print(np.sum(y_vel))
+        # print('--------------------------')
 
         # Press "C" to clean entire board
         pg.event.pump()
@@ -159,6 +170,10 @@ def simulate(dens, x_vel, y_vel):
 
         if keys[pg.K_c]:
             dens = np.zeros((grid_size,grid_size))
+        
+        if keys[pg.K_d]:
+            x_vel *= 1.3
+            y_vel *= 1.3
 
 # Run
 simulate(dens, x_vel, y_vel)
