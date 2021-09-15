@@ -2,6 +2,8 @@ import numpy as np
 import pygame as pg
 import time
 
+from pygame.surfarray import pixels2d
+
 # Other files
 from parameters import grid_size, dens,x_vel, y_vel
 from fluid_draw import draw
@@ -45,6 +47,10 @@ def simulate(dens, x_vel, y_vel):
 
     while running:
         # time.sleep(1)
+        # ------------------------------ Add source(s) -------------------------------------
+        dens[int(grid_size/2), int(grid_size/2)] += 5
+        x_vel[[int(grid_size/2), int(grid_size/2)]] += 0.05
+
         # ------------------------------ Diffusion of density ------------------------------
         dens = diffuse(0.1, dens)
 
@@ -101,11 +107,48 @@ def simulate(dens, x_vel, y_vel):
 
         dens += y_vel_add_dens
 
-        # --------------------- Walls
-        x_vel[:,0] = 0
-        x_vel[:,-1] = 0
-        y_vel[0,:] = 0
-        y_vel[-1,:] = 0
+        # ------------------------------ Delete density at edges ---------------------------
+        # dens[:,0] = 0
+        # dens[:,-1] = 0
+        # dens[0,:] = 0
+        # dens[-1,:] = 0
+
+        # ------------------------------ Clearing divergence -------------------------------
+        x_vel_div1 = np.pad(x_vel, ((0,0),(2,0)), constant_values=0)
+        x_vel_div2 = np.pad(x_vel, ((0,0),(0,2)), constant_values=0)
+
+        x_vel_div_tot = x_vel_div2 - x_vel_div1
+        x_vel_div_tot = x_vel_div_tot[0:grid_size, 1:-1]
+
+        y_vel_div1 = np.pad(y_vel, ((0,2),(0,0)), constant_values=0)
+        y_vel_div2 = np.pad(y_vel, ((2,0),(0,0)), constant_values=0)
+
+        y_vel_div_tot = y_vel_div2 - y_vel_div1
+        y_vel_div_tot = y_vel_div_tot[1:-1, 0:grid_size]
+
+        div = (x_vel_div_tot + y_vel_div_tot) / 2
+
+        p = np.zeros((grid_size,grid_size))
+
+        for k in range(20):
+            for i in range(1,grid_size-1):
+                for j in range(1,grid_size-1):
+                    p[i,j] = (p[i-1,j] + p[i+1,j] + p[i,j-1] + p[i,j+1] - div[i,j]) / 4
+        
+        px1 = np.pad(p, ((0,0),(2,0)), constant_values=0)
+        px2 = np.pad(p, ((0,0),(0,2)), constant_values=0)
+
+        py1 = np.pad(p, ((0,2),(0,0)), constant_values=0)
+        py2 = np.pad(p, ((2,0),(0,0)), constant_values=0)
+
+        px = (px2 - px1) / 2
+        py = (py2 - py1) / 2
+
+        px = px[0:grid_size,1:-1]
+        py = py[1:-1,0:grid_size]
+
+        x_vel -= px
+        y_vel -= py
 
         # ------------------------------ Self-Advection of velocities ----------------------
         # # X-velocity
@@ -160,8 +203,8 @@ def simulate(dens, x_vel, y_vel):
         draw(dens, x_vel, y_vel)
 
         # print(np.sum(dens))
-        # print(np.sum(x_vel))
-        # print(np.sum(y_vel))
+        print(np.sum(x_vel))
+        print(np.sum(y_vel))
         # print('--------------------------')
 
         # Press "C" to clean entire board
