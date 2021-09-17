@@ -1,12 +1,13 @@
 import numpy as np
 import pygame as pg
 import time
+from math import floor
 
-from pygame.surfarray import pixels2d
+# from pygame.surfarray import pixels2d
 
 # Other files
-from parameters import grid_size, dens,x_vel, y_vel
-from fluid_draw import draw
+from parameters import grid_size, dens, x_vel, y_vel, obst
+from fluid_draw import draw, w_scr, h_scr
 
 # Links
 # http://graphics.cs.cmu.edu/nsp/course/15-464/Fall09/papers/StamFluidforGames.pdf
@@ -48,11 +49,11 @@ def simulate(dens, x_vel, y_vel):
     while running:
         # time.sleep(1)
         # ------------------------------ Add source(s) -------------------------------------
-        dens[int(grid_size/2), int(grid_size/2)] += 5
-        x_vel[[int(grid_size/2), int(grid_size/2)]] += 0.05
+        # dens[int(grid_size/2), int(grid_size/2)] += 5
+        # x_vel[[int(grid_size/2), int(grid_size/2)]] += 0.05
 
         # ------------------------------ Diffusion of density ------------------------------
-        dens = diffuse(0.1, dens)
+        dens = diffuse(0.02, dens)
 
         # ------------------------------ Diffusion of velocities ---------------------------
         x_vel = diffuse(0.05, x_vel)
@@ -110,8 +111,8 @@ def simulate(dens, x_vel, y_vel):
         # ------------------------------ Delete density at edges ---------------------------
         # dens[:,0] = 0
         # dens[:,-1] = 0
-        # dens[0,:] = 0
-        # dens[-1,:] = 0
+        dens[0,:] = 0
+        dens[-1,:] = 0
 
         # ------------------------------ Clearing divergence -------------------------------
         x_vel_div1 = np.pad(x_vel, ((0,0),(2,0)), constant_values=0)
@@ -150,74 +151,122 @@ def simulate(dens, x_vel, y_vel):
         x_vel -= px
         y_vel -= py
 
+        # x_vel[:,0] = -x_vel[:,1]
+        # x_vel[:,-1] = -x_vel[:,-2]
+        y_vel[0,:] = -y_vel[1,:]
+        y_vel[-1,:] = -y_vel[-2,:]
+
         # ------------------------------ Self-Advection of velocities ----------------------
-        # # X-velocity
-        # # Separate positive and negative x-velocities
-        # x_vel_pos = np.where(x_vel>0, x_vel, 0)
-        # x_vel_neg = np.where(x_vel<0, x_vel, 0)
+        # X-velocity
+        # Separate positive and negative x-velocities
+        x_vel_pos = np.where(x_vel>0, x_vel, 0)
+        x_vel_neg = np.where(x_vel<0, x_vel, 0)
 
-        # # Calculate velocity that will be moved away
-        # x_vel_pos_tr = x_vel_pos*0.05
-        # x_vel_neg_tr = x_vel_neg*0.05
+        # Calculate velocity that will be moved away
+        x_vel_pos_tr = -(1/(1+np.exp(x_vel_pos))-0.5)*0.05 #*x_vel_pos
+        x_vel_neg_tr = -(1/(1+np.exp(x_vel_neg))-0.5)*0.05 #*x_vel_neg
 
-        # # Subtract this velocity from the squares where it is at
-        # x_vel -= (x_vel_pos_tr + abs(x_vel_neg_tr))
+        # Subtract this velocity from the squares where it is at
+        x_vel -= (x_vel_pos_tr + abs(x_vel_neg_tr))
 
-        # # Move positive velocities to the right and negative to the left
-        # tr_x_vel1 = np.pad(x_vel_pos_tr, ((0,0),(2,0)), constant_values=0)
-        # tr_x_vel2 = np.pad(x_vel_neg_tr, ((0,0),(0,2)), constant_values=0)
+        # Move positive velocities to the right and negative to the left
+        tr_x_vel1 = np.pad(x_vel_pos_tr, ((0,0),(2,0)), constant_values=0)
+        tr_x_vel2 = np.pad(x_vel_neg_tr, ((0,0),(0,2)), constant_values=0)
 
-        # # Now add the velocities to the squares where it moved to
-        # x_vel_add_vel = tr_x_vel1 + abs(tr_x_vel2)
-        # x_vel_add_vel[:,1] += x_vel_add_vel[:,0]
-        # x_vel_add_vel[:,-2] += x_vel_add_vel[:,-1]
-        # x_vel_add_vel = x_vel_add_vel[0:grid_size, 1:-1]
+        # Now add the velocities to the squares where it moved to
+        x_vel_add_vel = tr_x_vel1 + abs(tr_x_vel2)
+        x_vel_add_vel[:,1] += x_vel_add_vel[:,0]
+        x_vel_add_vel[:,-2] += x_vel_add_vel[:,-1]
+        x_vel_add_vel = x_vel_add_vel[0:grid_size, 1:-1]
 
-        # x_vel += x_vel_add_vel
+        x_vel += x_vel_add_vel
 
-        # # Y-velocity
-        # # Separate positive and negative y-velocities
-        # y_vel_pos = np.where(y_vel>0, y_vel, 0)
-        # y_vel_neg = np.where(y_vel<0, y_vel, 0)
+        # Y-velocity
+        # Separate positive and negative y-velocities
+        y_vel_pos = np.where(y_vel>0, y_vel, 0)
+        y_vel_neg = np.where(y_vel<0, y_vel, 0)
 
-        # # Calculate velocity that will be moved away
-        # y_vel_pos_tr = y_vel_pos*0.05
-        # y_vel_neg_tr = y_vel_neg*0.05
+        # Calculate velocity that will be moved away
+        y_vel_pos_tr = -(1/(1+np.exp(y_vel_pos))-0.5)*0.05 #y_vel_pos
+        y_vel_neg_tr = -(1/(1+np.exp(y_vel_neg))-0.5)*0.05 #y_vel_neg
 
-        # # Subtract this velocity from the squares where it is at
-        # y_vel -= (y_vel_pos_tr + abs(y_vel_neg_tr))
+        # Subtract this velocity from the squares where it is at
+        y_vel -= (y_vel_pos_tr + abs(y_vel_neg_tr))
 
-        # # Move positive velocities up and velocities down
-        # tr_y_vel1 = np.pad(y_vel_pos_tr, ((0,2),(0,0)), constant_values=0)
-        # tr_y_vel2 = np.pad(y_vel_neg_tr, ((2,0),(0,0)), constant_values=0)
+        # Move positive velocities up and velocities down
+        tr_y_vel1 = np.pad(y_vel_pos_tr, ((0,2),(0,0)), constant_values=0)
+        tr_y_vel2 = np.pad(y_vel_neg_tr, ((2,0),(0,0)), constant_values=0)
 
-        # # Now add the velocities to the squares where it moved to
-        # y_vel_add_vel = tr_y_vel1 + abs(tr_y_vel2)
-        # y_vel_add_vel[1,:] += y_vel_add_vel[0,:]
-        # y_vel_add_vel[-2,:] += y_vel_add_vel[-1,:]
-        # y_vel_add_vel = y_vel_add_vel[1:-1, 0:grid_size]
+        # Now add the velocities to the squares where it moved to
+        y_vel_add_vel = tr_y_vel1 + abs(tr_y_vel2)
+        y_vel_add_vel[1,:] += y_vel_add_vel[0,:]
+        y_vel_add_vel[-2,:] += y_vel_add_vel[-1,:]
+        y_vel_add_vel = y_vel_add_vel[1:-1, 0:grid_size]
 
-        # y_vel += y_vel_add_vel
+        y_vel += y_vel_add_vel
 
         # Draw the density (higher density = darker)
-        draw(dens, x_vel, y_vel)
+        draw(dens, x_vel, y_vel, obst)
 
-        # print(np.sum(dens))
-        print(np.sum(x_vel))
-        print(np.sum(y_vel))
-        # print('--------------------------')
-
-        # Press "C" to clean entire board
+        # ------------------------------ Obstacles properties -------------------------------
+        
+        # ------------------------------ Controls -------------------------------------------
         pg.event.pump()
         keys = pg.key.get_pressed()
 
+        # Press escape to exit simulation
+        if keys[pg.K_ESCAPE]:
+            exit()
+
+        # Press "C" to clean entire board
         if keys[pg.K_c]:
             dens = np.zeros((grid_size,grid_size))
         
+        # Press "D" to increase velocities by factor 1.3
         if keys[pg.K_d]:
             x_vel *= 1.3
             y_vel *= 1.3
+        
+        # Press space to pause simulation
+        if keys[pg.K_SPACE]:
+            pg.time.wait(200)
+            pause = True
+            while pause:
+                pg.event.pump()
+                keys = pg.key.get_pressed()
 
+                if keys[pg.K_SPACE]:
+                    pg.time.wait(200)
+                    break
+
+        # Press "I" to get information about flow          
+        if keys[pg.K_i]:
+            print(np.sum(dens))
+            print(np.sum(x_vel))
+            print(np.sum(y_vel))
+            print('--------------------------')
+
+        # Click with the mouse to add density and velocity
+        mouse = pg.mouse.get_pressed()
+        mouse_pos = pg.mouse.get_pos()
+
+        if mouse==(1,0,0):
+            ele = floor(mouse_pos[0] / (w_scr/grid_size))
+            row = floor(mouse_pos[1] / (h_scr/grid_size))
+
+            dens[row,ele] += 40
+
+            # for i in range(3):
+                # x_vel[row-1+i,ele] *= 1.1
+                # x_vel[row,ele-1+i] *= 1.1
+                # y_vel[row-1+i,ele] *= 1.1 
+                # y_vel[row,ele-1+i] *= 1.1
+
+        if mouse==(0,0,1):
+            ele = floor(mouse_pos[0] / (w_scr/grid_size))
+            row = floor(mouse_pos[1] / (h_scr/grid_size))
+
+            obst[row,ele] = True
 # Run
 simulate(dens, x_vel, y_vel)
 
