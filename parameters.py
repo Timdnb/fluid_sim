@@ -18,13 +18,16 @@ b = 0.5
 for row in range(grid_size):
     b += (0.5/grid_size)
     for ele in range(grid_size):
-        x_vel[row,ele] = b #random.uniform(-1,1) #b # 0.5 # random.uniform(-0.5,0.5)
+        x_vel[row,ele] = 1 #random.randint(-1,1)*random.uniform(0.8,1) #b # 0.5 # random.uniform(-0.5,0.5)
 
 # Y-velocity grid
 y_vel = np.zeros((grid_size,grid_size))
 
-k = 0
+k = -0.5
 for row in range(grid_size):
-    k += (0.5/grid_size)
+    k += (1/grid_size)
     for ele in range(grid_size):
-        y_vel[row,ele] = k #random.uniform(-1,1) # -k*0 #random.uniform(-0.5,0.5)
+        y_vel[row,ele] = 0 #random.randint(-1,1)*random.uniform(0.8,1) #-k*0 #random.uniform(-0.5,0.5)
+
+
+obst = np.full((grid_size, grid_size), False, dtype=bool)
