@@ -3,10 +3,10 @@ import pygame as pg
 import time
 from math import floor
 
-# from pygame.surfarray import pixels2d
+from pygame.surfarray import pixels2d
 
 # Other files
-from parameters import grid_size, dens, x_vel, y_vel, obst
+from parameters import grid_size, dens, diff_const_dens, x_vel, y_vel, diff_const_vel, obst, show_vel
 from fluid_draw import draw, w_scr, h_scr
 
 # Links
@@ -40,24 +40,26 @@ def diffuse(a, arr):
 
     return arr
 
-def simulate(dens, x_vel, y_vel):
+def simulate(dens, diff_const_dens, x_vel, y_vel, diff_const_vel, show_vel):
     """
     Simulate the whole fluid
     """
     running = True
+    n = 0
 
     while running:
         # time.sleep(1)
         # ------------------------------ Add source(s) -------------------------------------
-        # dens[int(grid_size/2), int(grid_size/2)] += 5
-        # x_vel[[int(grid_size/2), int(grid_size/2)]] += 0.05
+        # for i in range(8,grid_size-8,3):
+        #     dens[i,1] = 40
+        #     x_vel[:,1] = 1
 
         # ------------------------------ Diffusion of density ------------------------------
-        dens = diffuse(0.02, dens)
+        dens = diffuse(diff_const_dens, dens)
 
         # ------------------------------ Diffusion of velocities ---------------------------
-        x_vel = diffuse(0.05, x_vel)
-        y_vel = diffuse(0.05, y_vel)
+        x_vel = diffuse(diff_const_vel, x_vel)
+        y_vel = diffuse(diff_const_vel, y_vel)
 
         # ------------------------------ Advection -----------------------------------------
         # X-velocity
@@ -109,8 +111,8 @@ def simulate(dens, x_vel, y_vel):
         dens += y_vel_add_dens
 
         # ------------------------------ Delete density at edges ---------------------------
-        # dens[:,0] = 0
-        # dens[:,-1] = 0
+        dens[:,0] = 0
+        dens[:,-1] = 0
         dens[0,:] = 0
         dens[-1,:] = 0
 
@@ -150,11 +152,6 @@ def simulate(dens, x_vel, y_vel):
 
         x_vel -= px
         y_vel -= py
-
-        # x_vel[:,0] = -x_vel[:,1]
-        # x_vel[:,-1] = -x_vel[:,-2]
-        y_vel[0,:] = -y_vel[1,:]
-        y_vel[-1,:] = -y_vel[-2,:]
 
         # ------------------------------ Self-Advection of velocities ----------------------
         # X-velocity
@@ -206,13 +203,34 @@ def simulate(dens, x_vel, y_vel):
         y_vel += y_vel_add_vel
 
         # Draw the density (higher density = darker)
-        draw(dens, x_vel, y_vel, obst)
+        draw(dens, x_vel, y_vel, obst, show_vel)
 
         # ------------------------------ Obstacles properties -------------------------------
+        # If there is a obstacle present, multiply velocity with -1 (boundary condition)
+        x_vel = np.where(obst, x_vel*-1, x_vel)
+        y_vel = np.where(obst, y_vel*-1, y_vel)
         
         # ------------------------------ Controls -------------------------------------------
+        # Get keys pressed information
         pg.event.pump()
         keys = pg.key.get_pressed()
+
+        # Add walls using 1,2,3,4 keys
+        if keys[pg.K_1]:
+            x_vel[:,0] = -x_vel[:,1]
+            obst[:,0] = True
+
+        if keys[pg.K_2]:
+            y_vel[0,:] = -y_vel[1,:]
+            obst[0,:] = True
+
+        if keys[pg.K_3]:
+            x_vel[:,-1] = -x_vel[:,-2]
+            obst[:,-1] = True
+
+        if keys[pg.K_4]:
+            y_vel[-1,:] = -y_vel[-2,:]
+            obst[-1,:] = True
 
         # Press escape to exit simulation
         if keys[pg.K_ESCAPE]:
@@ -245,11 +263,21 @@ def simulate(dens, x_vel, y_vel):
             print(np.sum(x_vel))
             print(np.sum(y_vel))
             print('--------------------------')
-
-        # Click with the mouse to add density and velocity
+        
+        # Toggle velocity field
+        if keys[pg.K_h]:
+            if n % 2 == 0:
+                show_vel = False
+            else:
+                show_vel = True
+            n += 1
+            pg.time.wait(200)
+        
+        # Get mouse position information
         mouse = pg.mouse.get_pressed()
         mouse_pos = pg.mouse.get_pos()
 
+        # Click with LMB to add density and velocity
         if mouse==(1,0,0):
             ele = floor(mouse_pos[0] / (w_scr/grid_size))
             row = floor(mouse_pos[1] / (h_scr/grid_size))
@@ -262,13 +290,15 @@ def simulate(dens, x_vel, y_vel):
                 # y_vel[row-1+i,ele] *= 1.1 
                 # y_vel[row,ele-1+i] *= 1.1
 
+        # Click with RMB to add a obstacle
         if mouse==(0,0,1):
             ele = floor(mouse_pos[0] / (w_scr/grid_size))
             row = floor(mouse_pos[1] / (h_scr/grid_size))
 
             obst[row,ele] = True
+        
 # Run
-simulate(dens, x_vel, y_vel)
+simulate(dens, diff_const_dens, x_vel, y_vel, diff_const_vel, show_vel)
 
 
 
