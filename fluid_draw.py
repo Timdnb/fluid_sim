@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.lib import c_
 import pygame as pg
-from math import atan2, floor
+from math import atan2
 from parameters import grid_size
 
 # Pygame
@@ -22,13 +22,13 @@ color4 = (141,71,43)
 color5 = (177,52,51)
 color6 = (200,37,56)
 
-def draw(dens, x_vel, y_vel, obst):
-    # Find max density, black will be assigned to this density
+def draw(dens, x_vel, y_vel, obst, show_vel):
+    # White will be assigned to this density
     max_dens = 50
 
     # Draw rectangles and arrows
-    for row in range(1,grid_size-1):
-        for ele in range(1,grid_size-1):
+    for row in range(grid_size):
+        for ele in range(grid_size):
             x = ele*(w_scr/grid_size)
             y = row*(h_scr/grid_size)
 
@@ -62,10 +62,16 @@ def draw(dens, x_vel, y_vel, obst):
                 color_s = color6 
 
             # Draw rectangles and arrows on the screen
-            if obst[row,ele] == False:
-                pg.draw.rect(screen, color, (x, y, w_scr/grid_size, h_scr/grid_size))
-                pg.draw.aaline(screen, color_s, (x+cell_width/2,y+cell_width/2), (x+cell_width/2*(1+np.cos(angle)), y-cell_width/2*(-1+np.sin(angle))))   
+            if show_vel == True:
+                if obst[row,ele] == False:
+                    pg.draw.rect(screen, color, (x, y, w_scr/grid_size, h_scr/grid_size))
+                    pg.draw.aaline(screen, color_s, (x+cell_width/2,y+cell_width/2), (x+cell_width/2*(1+np.cos(angle)), y-cell_width/2*(-1+np.sin(angle))))   
+                else:
+                    pg.draw.rect(screen, (0,0,255), (x, y, w_scr/grid_size, h_scr/grid_size))
             else:
-                pg.draw.rect(screen, (0,0,255), (x, y, w_scr/grid_size, h_scr/grid_size))
+                if obst[row,ele] == False:
+                    pg.draw.rect(screen, color, (x, y, w_scr/grid_size, h_scr/grid_size))
+                else:
+                    pg.draw.rect(screen, (0,0,255), (x, y, w_scr/grid_size, h_scr/grid_size))
 
     pg.display.flip()
